@@ -17,4 +17,4 @@ jobs:
         with:
           # Example parameter for arc42: nofooter
           asciidoctor_params: --attribute=nofooter 
-          source_dir: 'arc42'
+          source_dir: 'docs'
