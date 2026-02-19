@@ -1,0 +1,6 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-technical-risks]]
+== Risks and Technical Debts
+
+This is a new project with no hard deadline, but a list of the tech debt incurred throughout the development process will be kept. Once the basic requirements defined in this document are built, tech debt will be prioritized over new enhancements.

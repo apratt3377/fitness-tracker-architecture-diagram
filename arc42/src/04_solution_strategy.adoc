@@ -1,0 +1,40 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-solution-strategy]]
+== Solution Strategy
+
+The goal of {project-name} is to design and implement a cloud-native microservices ecosystem and explore design decisions related to scalability, fault tolerance and resiliency.
+
+.Runtime Stack
+A benefit of microservices architecture is the flexibility to select an optimal runtime stack for each service.
+
+* *Primary Backend (Java 25 / Spring Boot):* The majority of services will be written with Spring Boot and Java 25. Spring Boot is frequently used in high quality production environments and provides support for many features needed in this project (spring security, spring cloud gateway, spring data). 
+* *Experimental Evaluation (Golang):* While Java is the primary backend langauge, Golang will be used for future service implementations to provide a comparison against the JVM stack. This choice serves as a technical refresher for two key technologies utilized throughout my career. 
+* *AI (Python 3.12):* The Analytics Service is written in Python, given that it's the leading stack for AI and machine learning. Although the service currently functions as an orchestrator for Gemini REST API calls, this choice ensures the architecture is future-proofed for integration of custom-tailored models or LLM frameworks.
+
+.Database Selection
+Multiple databases are used within this project to optimize for data integrity, flexible schemas and performance. The system follows a database-per-service pattern to ensure service autonomy and fault tolerance.
+
+* *Workout and User Management (Relational/PostgreSQL):* The Workout Management Service and User Service maintain independent PostgreSQL instances. Relationships across this service boundary are maintained via UUIDs. The fitness database uses a normalized structure with three tables to capture complex workout data. PostgreSQL ensures ACID compliance, guaranteeing that fitness transactions are processed reliably and data remains consistent and easily queryable.
+* *Notification Management (Document/MongoDB):* The Notification database houses AI-generated messages. These messages are semi-structured and the structure could change as the AI prompts and models are refined. MongoDB  allows for the storage of diverse message types and its native support for JSON-like documents aligns with the Gemini REST API.
+* *Session Management (In-Memory/Redis):* Redis will serve as a high speed registry for valid JWT identifiers. This allows for instant session revocation. By using Redis, we can have stateless microservices and achieve sub-millisecond latency for authentication checks. Additionally, the Redis Time-to-Live functionality automatically handles session expiration. 
+
+.Security
+This project will implement a hybrid session management solution leveraging the strengths of JWT and Redis. The API Gateway will require user authentication and authorization.
+
+* *Authorization Service (Spring Security):* The Authorization Service is a central security authority. It utilizes Spring Security to authenticate user credentials against the PostgresQL User DB and issues a cryptographically signed JWT. It registers the token's unique ID in Redis to activate the session. This token contains user claims, allowing downstream services to identify the user.
+* *Hybrid Session Management (Redis Integration):* A limitation of JWTs is the inability to revoke them before they expire. To solve this problem, the architecture incorporates Redis as a session validation layer. This creates a hybrid model that combines the scalability of JWT with control of traditional sessions. 
+* *Identity Propagation & Internal Trust:* Identity Propagation will be used to propagate the authenticated user's identity to internal services. This allows the internal microservices to be secure while eliminating the need to perform redundant JWT validation or Redis lookups.
+
+.Frontend Backend Communication
+The interaction between the client and the backend is designed to be stateless and secure. The system uses a central entrypoint through the API Gateway (Spring Cloud Gateway), which handles routing, rate limiting, and authentication. 
+
+Communication is handled by both synchronous and asynchronous REST (JSON/HTTP) interfaces. Standard operations are handled synchronously. Requests that trigger AI analysis use an asynchronous flow and return an HTTP 202 Accepted status to the client. The client maintains a SSE (Server-Sent Events) connection, allowing the backend to notify the client when the async workflow is complete.
+
+.Event Driven Architecture
+The most interesting design component of this project is the event driven architecture. By implementing an HTTP 202 Accepted flow, the Workout Management Service can acknowledge client requests immediately while handling the processing of the request asynchronously. The design uses an SNS/SQS fan-out pattern, where the Workout Management Service publishes events to a central SNS topic that are then distributed to specialized SQS queues depending on event filter. This provides the flexibility to add more event types and processing modules in the future.
+
+In addition this project uses SQS to decouple microservices to improve the horizontal scalability and fault tolerance of the solution. SQS acts as a buffer for long running Gemini API queries, ensuring the client isn't blocked by AI processing latency. Specifically, the Analytics Service is isolated between two SQS boundaries. This design decouples the high latency AI processing from both the input source and output destination, allowing the service to easily scale horizontally. While scaling is theoretical for this POC, the architecture is designed to solve common bottlenecks in production systems.
+
+.Deployment strategy
+On the deployment front, Kubernetes was chosen because it is the leading container orchestration service. Kubernetes also has built in service discovery, which is helpful in a microservices environment. 

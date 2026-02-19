@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+
+' This hides the inner package lines and labels
+skinparam package<<layout>> {
+    BorderColor transparent
+    BackgroundColor transparent
+    FontColor transparent
+    FontSize 0
+}
+
+' --- EXTERNAL TOP ---
+queue "Notification Queue" as nq
+queue "Cleanup Queue" as cq
+component "React Frontend" as client <<external>>
+
+package "notification-service Boundary" {
+    
+    ' This package exists ONLY for layout, it will be invisible
+    package "TopRow" <<layout>> {
+        component [Queue Listener] as listener
+        component [NotificationController] as rest
+        component [SSEController] as sse
+    }
+    
+    component [NotificationService] as service
+    component [NotificationRepository] as repo
+}
+
+database "MongoDB" as db
+
+' --- FLOWS ---
+nq --> listener
+cq --> listener
+client <--> rest : [REST]
+client <== sse : [SSE Stream]
+
+listener --> service
+rest --> service
+service --> sse : "Push"
+
+service --> repo
+repo -- db
+
+' Layout fix to keep it vertical
+TopRow -[hidden]down-> service
+service -[hidden]down-> repo
+@enduml

@@ -1,0 +1,18 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-runtime-view]]
+== Runtime View
+
+=== User Authentication
+
+User Authentication is an important flow to highlight in this microservices architecture. Identity verification is centralized in the API Gateway before routing requests to the appropriate microservice.
+
+image::auth.svg[]
+
+=== Create/Update Workout
+
+image::workout-update.svg[]
+
+=== Delete Workout
+
+image::workout-delete.svg[]

@@ -1,0 +1,53 @@
+@startuml
+skinparam Style strictuml
+skinparam sequenceMessageAlign center
+
+actor "User (React App)" as UI
+participant "API Gateway\n(Spring Cloud)" as GW <<Infrastructure>>
+participant "Auth Service\n(Spring Security)" as Auth <<Service>>
+participant "User Service" as UserSvc <<Service>>
+database "User DB\n(PostgreSQL)" as DB <<Database>>
+database "Session Store\n(Redis)" as Redis <<Cache>>
+
+== Authentication (Login) ==
+
+UI -> GW : POST /auth/login\n(credentials)
+GW -> Auth : Forward Login Request
+
+Auth -> UserSvc : Get User by Username
+UserSvc -> DB : SELECT user WHERE username=?
+DB --> UserSvc : User Profile + Hashed Credentials + Roles
+UserSvc --> Auth : User Details
+
+alt Successful Login
+    Auth -> Auth : Verify Password Hash
+    Auth -> Auth : Generate unique JTI (UUID)
+    Auth -> Redis : SET jti:<uuid> (metadata) \n(TTL = JWT expiration)
+    Auth -> Auth : Sign JWT (payload includes JTI)
+    Auth --> GW : 200 OK + JWT
+    GW --> UI : 200 OK + JWT
+else Invalid Credentials
+    Auth --> GW : 401 Unauthorized
+    GW --> UI : 401 Unauthorized
+end
+
+== Authorization (Subsequent Request) ==
+
+UI -> GW : GET /api/workouts\n(Header: Bearer JWT)
+
+group Request Validation
+    GW -> GW : Validate Cryptographic Signature
+    GW -> GW : Extract JTI from claims
+    GW -> Redis : GET jti:<uuid> (Liveliness Check)
+    
+    alt jti exists in Redis
+        Redis --> GW : Session Metadata
+        GW -> GW : Decorate Request\nAdd Header X-User-ID and X-User-Roles
+        GW -> "Workout Management Service" : GET /workouts (X-User-ID: 123, X-User-Roles: User)
+    else jti missing (Revoked/Expired)
+        Redis --> GW : null
+        GW --> UI : 401 Unauthorized / Forbidden
+    end
+end
+...
+@enduml

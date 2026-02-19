@@ -1,0 +1,35 @@
+@startuml
+' Forces the left-to-right flow
+left to right direction
+skinparam componentStyle uml2
+
+' 1. Define Actors
+actor User
+actor Admin
+
+' 2. Force Admin below User on the left side
+User -[hidden]down-> Admin
+
+' 3. Define the External System on the far right
+component "Gemini API" as gemini <<external>> #LightGray
+
+' 4. Define your Internal System with the list format
+package "fitness-tracker System" #LightBlue {
+  component ft [
+    <b>Internal Microservices</b>
+    --
+    + SPA (web)
+    + auth-service
+    + user-service
+    + workout-management-service
+    + notification-service
+    + analytics-service
+  ]
+}
+
+' 5. Relationships
+User --> ft : "Manages workouts"
+Admin --> ft : "Manages catalog"
+ft --> gemini : "AI recommendations"
+
+@enduml

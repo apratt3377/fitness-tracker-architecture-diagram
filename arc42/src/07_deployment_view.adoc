@@ -1,0 +1,38 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-deployment-view]]
+
+
+== Deployment View
+
+image::deployment.svg[]
+
+=== Motivation
+
+In the first iteration, this project will be run locally via Kubernetes and Docker. Kubernetes was chosen to closely resemble a production environment on AWS as well as take advantage of Kubernetes' native service discovery for use with Spring Cloud Gateway. Kubernetes provides the runtime for application services, while LocalStack provides a mock AWS environment. This setup allows for the testing of cloud-native patterns without incurring cloud costs.
+
+.Infrastructure Elements
+[cols="1,2" options="header"]
+|===
+| **Element** | **Description**
+| Developer Machine (Host) | physical hardware running Docker Desktop or Linux
+| Kubernetes Cluster | Orchestration layer. Manages workout-app namespace
+| Spring Cloud Gateway | Ingress point of cluster. Acts as single entry point for web browser
+| Stateful Persistence | PosgtreSQL, MongoDB, and Redis instances running as containerized workloads. They're treated as internal cluster resources to simplify networking.
+| LocalStack | Standalone docker container acting as external cloud provider. Mocks AWS SNS/SQS APIs.
+| Google Cloud (Gemini API)| External dependency. Requires outbound internet connection and valid API key.
+|===
+
+=== Quality and/or Performance Features
+
+.Scalability
+With Kuberentes, each microservice pod can be scaled independently.
+
+.Fault Tolerance & Resiliency
+The use of SQS as a buffer ensures that messages are not lost if services become unavailable.
+
+.Performance
+By using asynchronous processing, heavy AI calls are offloaded to a background event driven flow.
+
+.Low Latency Notifications
+Using SSE to provide real time updates to React SPA without needing constant polling.

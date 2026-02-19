@@ -1,0 +1,71 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-introduction-and-goals]]
+== Introduction and Goals
+
+
+{project-name} is a project to:
+
+* Track my strength workouts and analyze overall progress with AI-generated insights
+* Experiment with microservices architecture
+* Use industry standard software architecture documentation
+* Sharpen Java, Python, and SQL development skills
+
+
+=== Requirements Overview
+
+.Contents
+The purpose of {project-name} is to provide a way for users to keep track of their strength training workouts and receive AI-generated recommendations and analysis about their progress.
+
+This project is also intended to explore a microservices architecture and utilize different programming languages and technologies.
+
+.Main Features
+* Users can create, update, and delete workout plans
+* Users can view their workout history
+* AI-generated analysis of completed workouts
+* Simple UI for interacting with the system
+* Cloud-native microservices architecture
+
+The application should be able to handle multiple users and admins. Users should only be able to see their own workouts and recommendation data. Admins can only perform defined admin functionalities and cannot view user data.
+
+The application should be able to store an "unlimited" number of user workouts.
+
+The application will use a starter list of exercises from https://strengthtoovercome.com/functional-fitness-exercise-database
+
+=== Quality Goals
+
+.Quality Goals
+
+[cols="1,3,4", options="header"]
+|===
+| No. | Quality | Motivation
+
+| 1
+| Understandability
+| Each microservice serves a clear, isolated purpose. This modularity ensures that the system remains easy to navigate and modify, especially when adding new functional features. Documentation is well maintained.
+
+| 2
+| Usability
+| Interface should be intuitive and easy to enter workouts.
+
+| 3
+| Testability
+| All microservices should be well tested and documented. A 70% code coverage threshold ensures that core domain logic and event-processing paths are validated.
+|===
+
+=== Stakeholders
+
+.Stakeholders
+[cols="2,4", options="header"]
+|===
+| Name | Goal
+
+| Developers
+| Backend developers who are interested in event driven architecture, AI integration, Java and Python best practices.
+
+| Fitness Enthusiasts
+| Everyone from beginner gym-goers looking for a solution to maintain consistent progress to advanced athletes looking to level up their programs.
+
+| Software Architects
+| A project to experiment with microservices architecture and documentation best practices.
+|===

@@ -1,0 +1,255 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-building-block-view]]
+
+== Building Block View
+
+{project-name} is a microservices based application with a React SPA frontend and 5 microservices that make up the backend.
+
+image::building-blocks-starter.svg[]
+
+=== Whitebox Overall System
+
+image::whitebox-diagram.svg[]
+
+Motivation::
+
+This system is designed with a decoupled microservices architecture to ensure fault tolerance and independent scaling of core services. A primary factor for this design is the integration with the Google Gemini API, which introduces variable, high-latency responses and strict rate limiting. To prevent thread starvation and API Gateway timeouts, the system uses an asynchronous, event driven communication strategy for this workflow.
+
+Contained Building Blocks::
+
+[cols="1,2" options="header"]
+|===
+| **Name** | **Responsibility**
+| React SPA | React Frontend for users and admins to interact with the system
+| API Gateway | Unified entrypoint for all client requests. Handles routing, rate limiting and session validation.
+| Auth Service | Validates user credentials and issues JWTs. Uses Redis to store and revoke session liveliness tokens.
+| User Service | Manages user account lifecycle, profiles and roles. Persists user data to relational db.
+| Workout Management Service | Handles core business logic for tracking workouts. Publishes lifecycle events to Message Broker for downstream processing. Persists workout data to relational db.
+| Notification Service | Manages persistence of AI insights in MongoDB and pushes real time updates to UI via Server-Sent Events (SSE).
+| Analytics Service | Consumes workout events and orchestrates high latency calls to Google Gemini API for personalized analysis.
+| Message Broker | AWS SNS and SQS infrastructure that enables decoupled, event driven communication.
+|===
+
+All of the above blackboxes are standalone functional microservices except for the Message Broker and the API Gateway, which are shared infrastructure components. The API Gateway acts as the centralized entrypoint for all client traffic and the Message Broker facilitates the system's asynchronous communication.
+
+
+Important Interfaces::
+[cols="1,2" options="header"]
+|===
+| **Name** | **Responsibility**
+| Public API Gateway | The primary REST entry point for React SPA. Handles routing to User, Workout, and Notification services.
+| Auth/Identity API | Internal REST interface used by API Gateway to validate user credentials and sessions.
+| Workout Ingestion API (200/201/204) | Public REST interface for creating, updating and deleting workouts.
+| Workout Ingestion API (202 Accepted) | Public REST interface for completing workouts.
+| Workout Stream (async) | Message-based interface for publishing workout lifecycle events to subscribers.
+| Analytics Stream | Consumes events from Workout Stream via SQS to trigger AI anaylsis.
+| Notification Stream | Internal event based interface to trigger real time push notifications to users.
+| Gemini AI Integration | Outbound interface to Google Gemini API.
+| Persistence to DBs | JDBC interface between microservices and their respective databases.
+|===
+
+==== React SPA (Blackbox)
+
+.Responsibility
+The React SPA provides the user interface for both users and admins to interact with the {project-name} system. The application is built as a standard Single Page Application with React.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| REST interface | Communicates with the API Gateway
+| SSE interface | Establishes long-lived, unidirectional connection with Notification Service to receive real-time AI workout analysis updates.
+|===
+
+==== API Gateway (Blackbox)
+
+.Responsibility
+The API Gateway serves as the single entry point for all client requests. It handles request routing, rate limiting, and security enforcement. It utilizes Kubernetes Service Discovery to resolve microserivce instances.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| REST Interface | Exposes public endpoint for clients (React SPA) to interact with.
+| Internal routing | Routes requests to appropriate microservices using Kubernetes Service Discovery.
+|===
+
+==== Auth Service (Blackbox)
+
+.Responsibility
+The Auth Service manages the security lifecycle of all user sessions. It performs credential verification, issues signed JWTs and manages session state.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| REST Interface + 
+`/login /logout` | Public REST API for credential exchange for token on login and session invalidation on logout.
+| Internal Redis | Store and manage jti claim and session metadata
+|===
+
+==== User Service (Blackbox)
+
+.Responsibility
+User service manages the lifecycle of a user (registration, profile, deactivation). It serves as source of truth for user identity. It provides necessary data for Auth Service to perform authentication and authorization checks.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| REST Interface + 
+`/api/v1/users` | Public REST API exposed via the API gateway for user registration and profile updates.
+| Internal REST Interface +
+`/internal/v1/identity` | Internal REST API used by Auth Service to retrieve hashed credentials and roles.
+| PostgreSQL Persistence | Private JDBC interface to User DB for persisting users.
+|===
+
+==== Workout Management Service (Blackbox)
+
+.Responsibility
+Workout Management Service is the core service for managing the lifecycle of user workouts, supporting full CRUD operations. It acts as a producer for the asynchronous data stream, publishing completed workout data to be processed downstream by analytics services.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| Public REST Interface + 
+`/api/v1/workouts` | Public REST API for users to submit workout data and view workout history. 
+| Workout Event Stream +
+`Workout.Domain.Events` | Publisher to SNS Topic. 
+| PostgreSQL Persistence | Private JDBC interface to Fitness db for persisting workout data.
+|===
+
+==== Notification Service (Blackbox)
+
+.Responsibility
+The Notification Service stores all notifications for the Client and alerts the Client upon new messages ready for display. It persists AI-generated analysis results and manages active Server-Sent Event (SSE) streams.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| SSE Stream + 
+`/api/v1/notifications/stream` | A unidirectional, long-lived HTTP connection used to push real-time alerts directly to React SPA.
+| Public REST interface +
+`/api/v1/notifications` | Public REST API for retrieving and managing notifications.
+| MongoDB Persistence | Private MongoDB layer to persist notification data.
+| SQS Consumer | Internal listener that pulls processed analysis results from Notification Queue and cleanup/delete events from Cleanup Queue.
+|===
+
+==== Analytics Service (Blackbox)
+
+.Responsibility
+The Analytics service is the AI Orchestrator. It's a specialized consumer designed to handle the high-latency and unpredictable nature of LLM interactions. It transforms raw workout data into structured prompts for the Google Gemini API and publishes the resulting insights to the notification stream via SQS.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| Workout Event Stream + 
+`Workout.Domain.Events` | SQS Consumer that triggers AI analysis workflow
+| AI Analysis Client | Outbound HTTPS requests to Google API (Gemini). Handles api authentication, prompt injection and response parsing.
+| Notification Stream | An asynchronous SQS interface used to publish final AI generated insights to the Notification Service.
+|===
+
+==== Message Broker (Blackbox)
+
+.Responsibility
+The Message Broker provides the asynchronous communication backbone for the system. It's resonsible for reliable distribution of events to downstream services. By implementing a fan-out pattern with message filtering, it ensures that workout processing, data cleanup, and notification delivery are decoupled and handled independently.
+
+.Interfaces
+[cols="1,2" options="header"]
+|===
+| **Name** | **Description**
+| `Workout.Domain.Events` | SNS Topic that fans out to SQS
+| Analytics Queue + 
+`Filter: type=process` | SQS queue that receives workout completed events intended for AI processing.
+| Cleanup Queue +
+`Filter: type=delete` | SQS queue that receives workout lifecycle events to ensure data is purged properly.
+| Notification Queue | SQS queue serving as a point to point buffer between Analytics and Notification services.
+|===
+
+==== White Box: Notification Service
+
+image::notification-whitebox.svg[]
+
+.Internal Components
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| Queue Listener | Async entrypoint. Monitors the Notification Queue for incoming AI insights and the Cleanup Queue for deletion events.
+| NotificationController | REST controller that handles synchronous request-response interactions with React Frontend.
+| SSE Controller | Manages persistent Server-Sent Events pipe. Pushes real-time UI updates.
+| NotificationService | Core logic of service.
+| NotificationRepository | Data access layer. Encapsulates all interactions with MongoDB.
+|===
+
+.Contained Blackboxes
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| MongoDB | Document store that persists AI analysis message, read/unread states, and metadata linking notifications to specific users and workouts.
+| Cleanup Queue (SQS) | Buffer for delete events.
+| Notification Queue (SQS) | Point to point buffer between Analytics Service and Notification Service.
+|===
+
+==== White Box: Workout Management Service
+
+image::wms-whitebox.svg[]
+
+.Internal Components
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| WorkoutController | REST interface that handles synchronous HTTP requests for CRUD operations on workouts. Returns 201 Created or 202 Accepted.
+| WorkoutService | Core business logic. Orchestrates workout lifecycle, ensuring data integrity before persistence and determining when to trigger downstream events.
+| WorkoutRepository | Data access layer for PostgreSQL. Manages persistence of workout entities, exercise mappings, and user specific workout details in relational store.
+| MessageProducer | Integration to Message Broker. Publishes events to SNS Topic. `Workout Completed` sent to Analytics Queue. `Workout Deleted` sent to Cleanup Queue
+|===
+
+.Contained Blackboxes
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| PostgreSQL | Relational storage for workout data.
+| SNS Topic | Entrypoint for async communication to downstream services.
+|===
+
+==== White Box: Analytics Service
+
+image::analytics-whitebox.svg[]
+
+.Internal Components
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| QueueListener | Async entrypoint. Monitors the Analytics Queue.
+| AnalyticsService | Core business logic. Creates AI prompt that includes workout data.
+| GeminiClient | AI integration adapter. Handles REST communication with Google Gemini API.
+| MessageProducer | Integration to Message Broker. Publishes AI generated insight messages to Notification Queue.
+|===
+
+.Contained Blackboxes
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| Google Gemini API | External AI provider. Processes workout data given a prompt. Treated as a blackbox as only interact via public API.
+| Analytics Queue (SQS) | Inbound buffer for messages that need to be processed. 
+| Notification Queue (SQS) | Outbound buffer to send processed messages to Notification Service
+|===
+
+==== White Box: Message Broker
+
+image::event-architecture.png[]
+
+.Internal Components
+[cols="1,2" options="header"]
+|===
+| **Component** | **Responsibility**
+| Workout.Domain.Events (SNS) | Central entrypoint for event driven architecture. Evaluates message attributes to decide which downstream queue receives the message.
+| Analytics Queue (SQS) | Buffers events tagged with `process` filter for Analytics Service.
+| Cleanup Queue (SQS) | Buffers events tagged with `delete` filter to trigger data removal in Notification service.
+| Notification Queue (SQS) | Point to point buffer between Analytics Service and Notification Service.
+| Dead Letter Queues | Store messages that have failed processing after multiple retries, allowing for manual recovery without blocking main queues.
+|===

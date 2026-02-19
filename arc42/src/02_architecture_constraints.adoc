@@ -1,0 +1,38 @@
+ifndef::imagesdir[:imagesdir: ../images/out]
+
+[[section-architecture-constraints]]
+== Architecture Constraints
+
+=== Technical Constraints
+
+.Technical Constraints
+[cols="2,4", options="header"]
+|===
+| Constraint | Goal
+| Java 25 / Maven | Chosen as primary backend language to ensure long term support and high performance. Spring Boot has a mature ecosytem with integrations for spring security and spring cloud, which are critical features of this application.
+| Python 3.12 | Required for the Analytics Service to provide compatibility with ML libraries and AI processing frameworks.
+| LocalStack | Provides AWS SNS/SQS locally without incurring cloud costs.
+| Docker / Kubernetes | Application must be fully functional in local k8s environment. This ensures easy future migration to the cloud.
+|===
+
+=== Organizational Constraints
+
+.Organizational Constraints
+[cols="2,4", options="header"]
+|===
+| Constraint | Goal
+| Solo Developer Project | Architecutre must be manageable by one person and require minimal operational overhead.
+| 4 month timeline | Primarily an exploration/MVP project, with options to design for scalability later on.
+| 70% code coverage goal | Testing is paramount. Metric for learning and quality.
+| Licensing | Publish under liberal open source license to encourage learning.
+|===
+
+=== Conventions
+
+.Conventions
+[cols="2,4", options="header"]
+|===
+| Convention | Goal
+| Architecture Documentation | arc42 template
+| Coding conventions | https://www.oracle.com/java/technologies/javase/codeconventions-contents.html[Java Conventions] and PEP 8
+|===
