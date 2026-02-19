@@ -7,9 +7,6 @@
 include::src/config.adoc[]
 
 = image:arc42-logo.png[arc42] Template
-:revnumber: {revnumber}
-:revdate: {revdate}
-:revremark: {revremark}
 :toc-title: Table of Contents
 
 // horizontal line
