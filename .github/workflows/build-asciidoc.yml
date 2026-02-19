@@ -1,0 +1,19 @@
+name: Build AsciiDoc and deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Adjust to your default branch name
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build AsciiDoc and deploy
+        uses: manoelcampos/asciidoctor-ghpages-action@v2
+        with:
+          # Example parameter for arc42: nofooter
+          asciidoctor_params: --attribute=nofooter 
