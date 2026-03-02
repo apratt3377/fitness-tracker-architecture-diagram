@@ -1,0 +1,79 @@
+@startuml
+!theme plain
+skinparam ranksep 50
+title Local Deployment View
+
+node "Developer Machine (Host)" {
+
+    node "Web Browser" as browser {
+        artifact "React SPA" as react_app
+    }
+
+    node "Kubernetes Cluster" as k8s {
+        node "Pod: Spring Cloud Gateway" as p_gateway
+        
+        package "Namespace: workout-app" {
+            ' Exact Order: Auth (1) -> User (2) -> Workout (3) -> Notification (4) -> Analytics (5)
+            node "Pod: Auth Service" as p_auth
+            node "Pod: User Service" as p_us
+            node "Pod: Workout Service" as p_ws
+            node "Pod: Notification Service" as p_ns
+            node "Pod: Analytics Service" as p_as
+
+            ' Force horizontal sequence
+            p_auth -[hidden]right-> p_us
+            p_us -[hidden]right-> p_ws
+            p_ws -[hidden]right-> p_ns
+            p_ns -[hidden]right-> p_as
+        }
+    }
+
+    node "Docker Engine (Host)" as docker {
+        node "Container: LocalStack" as ls {
+            component [SNS / SQS] as ls_engine
+        }
+
+        database "Redis" as db_auth
+        database "PostgreSQL" as db_us
+        database "PostgreSQL" as db_ws
+        database "MongoDB" as db_ns
+    }
+}
+
+cloud "Google Cloud" as gcp {
+    component [Gemini AI API] as gemini
+}
+
+' --- FORCED VERTICAL SPINE ---
+browser -[hidden]down-> p_gateway
+p_gateway -[hidden]down-> p_auth
+p_auth -[hidden]down-> db_auth
+db_auth -[hidden]down-> docker
+
+' --- TRAFFIC FLOWS ---
+
+' Entry
+react_app -down-> p_gateway : HTTP / SSE
+
+' Gateway to Services (Fixed: Notification is now just HTTP)
+p_gateway -down-> p_auth : HTTP
+p_gateway -down-> p_us : HTTP
+p_gateway -down-> p_ws : HTTP
+p_gateway -down-> p_ns : HTTP 
+
+' Database Connections
+p_auth -down-> db_auth : RESP
+p_us -down-> db_us : JDBC
+p_ws -down-> db_ws : JDBC
+p_ns -down-> db_ns : Wire
+
+' Messaging (Service -> LocalStack)
+p_ws -down-> ls_engine : HTTP
+p_as -down-> ls_engine : HTTP
+p_ns -down-> ls_engine : HTTP
+
+' External and Push
+p_as -right-> gemini : HTTPS
+p_ns -[thickness=2]up-> react_app : SSE (via Gateway)
+
+@enduml

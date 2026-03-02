@@ -1,0 +1,20 @@
+@startuml
+skinparam component<<external>> {
+    BackgroundColor #LightGray
+}
+
+frame "fitness-tracker-context" {
+    component ft as "Fitness Tracker"
+    
+    ' Adding the stereotype here
+    component re as "recommendation-engine" <<external>>
+    
+    :user:
+    :admin:
+
+    user -[dashed]-> ft: Creates and manages workouts
+    admin -[dashed]-> ft: Manages exercise catalog
+    ft -[dashed]-> re : queries AI engine
+}
+@enduml
+

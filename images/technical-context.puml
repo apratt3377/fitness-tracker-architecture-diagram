@@ -1,0 +1,25 @@
+@startuml
+skinparam componentStyle uml2
+
+header Technical Context
+
+node "Client Device" as client {
+    component "fitness-tracker::web" as web <<SPA>>
+}
+
+node "Local Server" as host {
+    package "fitness-tracker System" {
+        component "fitness-tracker::api" as api
+    }
+}
+
+' Specific Gemini Cloud
+cloud "Google API (Gemini)" as gemini <<external>> #White {
+    component "Gemini 1.5 Flash" as model #LightGray
+}
+
+' Technical Connections
+web -- api : "HTTP / JSON"
+api -- model : "HTTPS\n(API Key Auth)"
+
+@enduml

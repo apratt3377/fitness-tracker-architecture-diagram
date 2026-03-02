@@ -1,0 +1,30 @@
+@startuml
+!theme plain
+
+' --- EXTERNAL TOP ---
+queue "Analytics Queue" as aq <<external>>
+queue "Notification Queue" as nq <<external>>
+
+package "analytics-service Boundary" {
+    component [QueueListener] as listener
+    component [AnalyticsService] as service
+    component [GeminiClient] as aiClient
+    component [MessageProducer] as producer
+}
+
+' --- EXTERNAL CLOUD ---
+cloud "Google Gemini API" as gemini <<external>>
+
+' --- FLOWS ---
+aq --> listener
+listener --> service
+
+' THE CRITICAL EXTERNAL ARROW
+service --> aiClient
+aiClient <--> gemini : "HTTPS / REST (JSON)"
+
+' Final output
+service --> producer
+producer --> nq : HTTPS
+
+@enduml

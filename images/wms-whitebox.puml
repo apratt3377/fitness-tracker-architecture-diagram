@@ -1,0 +1,47 @@
+@startuml
+!theme plain
+
+' Layout styling to hide grouping lines
+skinparam package<<layout>> {
+    BorderColor transparent
+    BackgroundColor transparent
+    FontColor transparent
+    FontSize 0
+}
+
+' --- EXTERNAL TOP ---
+component "React Frontend" as client <<external>>
+
+package "workout-management-service Boundary" {
+    
+    package "TopRow" <<layout>> {
+        component [WorkoutController] as rest
+    }
+    
+    component [WorkoutService] as service
+    
+    package "BottomRow" <<layout>> {
+        component [WorkoutRepository] as repo
+        component [MessageProducer] as producer
+    }
+}
+
+' --- EXTERNAL BOTTOM ---
+database "PostgreSQL" as db
+entity "SNS Topic" as sns <<infrastructure>>
+
+' --- FLOWS ---
+client <--> rest : [REST]
+rest --> service
+
+service --> repo
+repo -- db
+
+' Outbound to SNS
+service --> producer : "Workout Event"
+producer --> sns : "Publish"
+
+' Layout Hints
+TopRow -[hidden]down-> service
+service -[hidden]down-> BottomRow
+@enduml
