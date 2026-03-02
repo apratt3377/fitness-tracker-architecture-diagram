@@ -6,7 +6,7 @@ actor "User (React App)" as UI
 participant "API Gateway\n(Spring Cloud)" as GW <<Infrastructure>>
 participant "Auth Service\n(Spring Security)" as Auth <<Service>>
 participant "User Service" as UserSvc <<Service>>
-database "User DB\n(PostgreSQL)" as DB <<Database>>
+database "Account DB\n(PostgreSQL)" as DB <<Database>>
 database "Session Store\n(Redis)" as Redis <<Cache>>
 
 == Authentication (Login) ==

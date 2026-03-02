@@ -13,7 +13,7 @@ image::business-context.svg[]
 A fitness enthusiast uses {project-name} to log their strength training workouts and receive AI-generated workout plans.
 
 .Admin
-An admin manages the list of exercises available to users.
+An admin manages the list of exercises available for users to include in their workout plans.
 
 .AI Engine
 The free Gemini API will be used with developer-authored prompts for each type of supported analytical query (ie to generate a summary of the workout or to provide recommendations for the user's next workout).
@@ -23,11 +23,11 @@ The free Gemini API will be used with developer-authored prompts for each type o
 
 image::technical-context.svg[]
 
-.Backend (fitness-tracker::api)
-The backend runs as microservices within a local kubernetes cluster. REST endpoints are exposed over HTTP for the frontend. The backend will make HTTPS requests to the Gemini API using an API Key.
-
 .Frontend (fitness-tracker::web)
 The React frontend runs in a web browser. It communicates with the backend over HTTP. It will service both Admins and Users.
+
+.Backend (fitness-tracker::api)
+The backend runs as microservices within a local kubernetes cluster. REST endpoints are exposed over HTTP for the frontend. The backend will make HTTPS requests to the Gemini API using an API Key.
 
 .Google Gemini API
 The backend makes HTTP requests to Gemini's REST API supplying a prompt along with the workout payload to generate workout analysis and recommendations.

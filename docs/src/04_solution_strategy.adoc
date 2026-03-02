@@ -22,9 +22,9 @@ Multiple databases are used within this project to optimize for data integrity, 
 .Security
 This project will implement a hybrid session management solution leveraging the strengths of JWT and Redis. The API Gateway will require user authentication and authorization.
 
-* *Authorization Service (Spring Security):* The Authorization Service is a central security authority. It utilizes Spring Security to authenticate user credentials against the PostgresQL User DB and issues a cryptographically signed JWT. It registers the token's unique ID in Redis to activate the session. This token contains user claims, allowing downstream services to identify the user.
+* *Authorization Service (Spring Security):* The Authorization Service is a central security authority. It utilizes Spring Security to authenticate user credentials against the PostgresQL Account DB and issues a cryptographically signed JWT. It registers the token's unique ID in Redis to activate the session. This token contains user claims, allowing downstream services to identify the user.
 * *Hybrid Session Management (Redis Integration):* A limitation of JWTs is the inability to revoke them before they expire. To solve this problem, the architecture incorporates Redis as a session validation layer. This creates a hybrid model that combines the scalability of JWT with control of traditional sessions. 
-* *Identity Propagation & Internal Trust:* Identity Propagation will be used to propagate the authenticated user's identity to internal services. This allows the internal microservices to be secure while eliminating the need to perform redundant JWT validation or Redis lookups.
+* *Identity Propagation & Internal Trust:* Identity Propagation will be used to propagate the authenticated user's identity to internal services. This secures the internal microservices while eliminating redundant JWT validation or Redis lookups.
 
 .Frontend Backend Communication
 The interaction between the client and the backend is designed to be stateless and secure. The system uses a central entrypoint through the API Gateway (Spring Cloud Gateway), which handles routing, rate limiting, and authentication. 

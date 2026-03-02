@@ -8,10 +8,10 @@ participant "API Gateway" as APIG <<Infrastructure>>
 
 ' Tier 2: Core Domain
 participant "Workout Management Service" as WS <<Service>>
-database "Workout DB" as WDB <<Database>>
+database "Fitness DB" as WDB <<Database>>
 
 ' Tier 3: Async Infrastructure
-participant "Workout.Domain.Events (SNS)" as WTSNS
+participant "Workout-Domain-Events (SNS)" as WTSNS
 queue "Cleanup Queue (SQS)" as CQ
 
 ' Tier 4: Downstream Consumers
@@ -26,7 +26,7 @@ APIG -> WS : Forward Request
 alt DB Success
     WS -> WDB : **Mark Inactive (Soft Delete)**
     
-    WS -> WTSNS : Emit 'WorkoutDeleted' {action: "delete"}
+    WS -> WTSNS : Emit 'WorkoutDeleted' {action: "workout_deleted"}
     
     WS --> APIG : 200 OK
     APIG --> C : Success
@@ -37,7 +37,7 @@ end
 
 == Async Processing ==
 
-WTSNS -> CQ : Filter match: action == "delete"
+WTSNS -> CQ : Filter match: action == "workout_deleted"
 
 NS -> CQ : Consume 'WorkoutDeleted' Event
 

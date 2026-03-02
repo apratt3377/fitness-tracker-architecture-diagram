@@ -10,6 +10,7 @@ ifndef::imagesdir[:imagesdir: ../images/out]
 * Experiment with microservices architecture
 * Use industry standard software architecture documentation
 * Sharpen Java, Python, and SQL development skills
+* Utilize AI coding tools to accelerate development and improve prompt engineering techniques
 
 
 === Requirements Overview
@@ -22,7 +23,7 @@ This project is also intended to explore a microservices architecture and utiliz
 .Main Features
 * Users can create, update, and delete workout plans
 * Users can view their workout history
-* AI-generated analysis of completed workouts
+* Users receive AI-generated analysis of completed workouts
 * Simple UI for interacting with the system
 * Cloud-native microservices architecture
 
@@ -46,11 +47,11 @@ The application will use a starter list of exercises from https://strengthtoover
 
 | 2
 | Usability
-| Interface should be intuitive and easy to enter workouts.
+| Interface should be intuitive and easy to enter and view workouts.
 
 | 3
 | Testability
-| All microservices should be well tested and documented. A 70% code coverage threshold ensures that core domain logic and event-processing paths are validated.
+| All microservices should be well tested and documented. A 70% code coverage threshold ensures that core domain logic is validated.
 |===
 
 === Stakeholders

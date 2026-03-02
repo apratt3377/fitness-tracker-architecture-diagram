@@ -8,30 +8,30 @@ ifndef::imagesdir[:imagesdir: ../images/out]
 * *Decision:* Use HTTP 202 Accepted. The Workout Management Service acknowledges receipt of request immediately. Processing is offloaded to other services via SNS/SQS.
 * *Consequences:* High UI responsiveness; decoupling of services; increased system complexity; requires a solution to notify UI of processing completion
 
-=== ADR: SNS + SQS Fanout & Service Decoupling
+=== ADR: SNS + SQS Fan-out & Service Decoupling
 * *Context:* The Workout Management Service must handle two different workflows, Workout Completion (AI analysis) and Workout Deletion (purge data from notification db). AI processing with Gemini API is high latency.
-* *Decision:* Implement a fanout pattern using an SNS topic with message attribute filtering and multiple SQS Queues as dedicated service buffers.
+* *Decision:* Implement a fan-out pattern using an SNS topic with message attribute filtering and multiple SQS Queues as dedicated service buffers.
 * *Key Design Elements:* 
-** *Action-based filtering*: SNS topic broadcasts messages with attributes. Analytics queue filters for messages with `process` attribute to begin AI processing flow. Cleanup queue filters for messages with `delete` attribute to begin cleanup of stored notification messages.
-** *Double Queue Buffer:* A dedicated Notification Queue is placed in between the Analytics Service and the Notification Service. This decouples the AI processing logic from the final notification delivery. It ensures that a surge in AI generated insights doesn't overwhelm the Notification Service's MongoDB instance.
+** *Action-based filtering*: SNS topic broadcasts messages with attributes. Analytics queue filters for messages with `workout_completed` attribute to begin AI processing flow. Cleanup queue filters for messages with `workout_deleted` attribute to begin cleanup of stored notification messages.
+** *Double Queue Buffer:* A dedicated Notification Queue is placed in between the Analytics Service and the Notification Service. This decouples the AI processing logic from the final notification delivery and ensures that a surge in AI generated insights doesn't overwhelm the Notification Service's MongoDB instance.
 ** *Message Persistence:* SQS ensures messages are not lost if a consumer is temporarily down
 * *Rationale:* 
-** Extensibility: This decision will make it easy to add new functional streams to the Workout Manangement Service in the future. If a Rewards or Email service was to be added, a new SQS queue could subscribe to the SNS topic, requiring minimal or no changes to the Workout Management Service.
-** Resource Protection: SQS acts as a buffer between high-throughput Workout Management Service and the higher latency downstream resources. By buffering incoming requests, external AI Quotas (Gemini API rate limits) and internal compute resources are protected from traffic spikes. 
-** Fault Isolation: The fanout pattern ensures that a failure in one functional stream doesn't impact another. 
-* Consequences
-** Positive: Enhanced Resiliency and scalability. Clear separation between Java Core, python AI and MongoDB notification layers.
-** Negative: Small delay for AI results, which can be managed on the UI and the 202 Accepted pattern.
+** *Extensibility:* This decision will make it easy to add new functional streams to the Workout Management Service in the future. If a Rewards or Email service was to be added, a new SQS queue could subscribe to the SNS topic, requiring minimal or no changes to the Workout Management Service.
+** *Resource Protection:* SQS acts as a buffer between high-throughput Workout Management Service and the higher latency downstream resources. By buffering incoming requests, external AI Quotas (Gemini API rate limits) and internal compute resources are protected from traffic spikes. 
+** *Fault Isolation:* The fan-out pattern ensures that a failure in one functional stream doesn't impact another. 
+* *Consequences*
+** *Positive:* Enhanced Resiliency and scalability. Clear separation between Java, Python, AI and MongoDB layers.
+** *Negative:* Small delay for AI results, which can be managed on the UI with the 202 Accepted pattern.
 
 === SSE vs websockets
 * *Context:* The Client needs to know when the AI analysis is complete to display the results to the User.
 * *Decision:* Server-Sent Events (SSE)
-* *Consequences:* Unlike Websockets, which are complex and bidirectional, SSE is a lightweight, unidirecitonal push over HTTP. Since the requirement is just a notification from the backend to the client, SSE fits.
+* *Consequences:* Unlike Websockets, which are complex and bidirectional, SSE is a lightweight, unidirectional push over HTTP. Since the requirement is just a notification from the backend to the client, SSE fits.
 
 === Hybrid JWT-Redis Session Management
 * *Context:* Standard JWTs cannot be revoked until they expire, which is a security risk.
 * *Decision:* Implement a hybrid opaque-JWT approach described in this https://dev.to/honatas/a-different-approach-to-user-sessions-in-microservices-5bpi[guide]
-* *Consequences:* Combines scalabiilty of JWTs with instant revocation by Redis. JWT's jti is treated as an opaque reference at the API Gateway.
+* *Consequences:* Combines scalability of JWTs with instant revocation by Redis. JWT's jti is treated as an opaque reference at the API Gateway.
 
 === Gemini API
 * *Context:* Gemini Free Tier has strict rate limits and requires high quality, structured output.

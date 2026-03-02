@@ -3,9 +3,12 @@ ifndef::imagesdir[:imagesdir: ../images/out]
 [[section-deployment-view]]
 
 
-== Deployment View
+== Deployment View (Option 1)
 
 image::deployment.svg[]
+
+== Deployment View (Option 2)
+image::deployment-2.svg[]
 
 === Motivation
 
@@ -18,7 +21,7 @@ In the first iteration, this project will be run locally via Kubernetes and Dock
 | Developer Machine (Host) | physical hardware running Docker Desktop or Linux
 | Kubernetes Cluster | Orchestration layer. Manages workout-app namespace
 | Spring Cloud Gateway | Ingress point of cluster. Acts as single entry point for web browser
-| Stateful Persistence | PosgtreSQL, MongoDB, and Redis instances running as containerized workloads. They're treated as internal cluster resources to simplify networking.
+| Stateful Persistence | PosgtreSQL, MongoDB, and Redis instances running as containerized workloads. There are 2 options for deployment: running within the kubernetes cluster to simplify networking, or running as standalone docker containers to more closely resemble production environment. Both of these solutions will be evaluated.
 | LocalStack | Standalone docker container acting as external cloud provider. Mocks AWS SNS/SQS APIs.
 | Google Cloud (Gemini API)| External dependency. Requires outbound internet connection and valid API key.
 |===
@@ -26,7 +29,7 @@ In the first iteration, this project will be run locally via Kubernetes and Dock
 === Quality and/or Performance Features
 
 .Scalability
-With Kuberentes, each microservice pod can be scaled independently.
+With Kubernetes, each microservice pod can be scaled independently.
 
 .Fault Tolerance & Resiliency
 The use of SQS as a buffer ensures that messages are not lost if services become unavailable.

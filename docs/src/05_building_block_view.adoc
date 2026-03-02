@@ -65,7 +65,7 @@ The React SPA provides the user interface for both users and admins to interact 
 ==== API Gateway (Blackbox)
 
 .Responsibility
-The API Gateway serves as the single entry point for all client requests. It handles request routing, rate limiting, and security enforcement. It utilizes Kubernetes Service Discovery to resolve microserivce instances.
+The API Gateway serves as the single entry point for all client requests. It handles request routing, rate limiting, and security enforcement. It utilizes Kubernetes Service Discovery to resolve microservice instances.
 
 .Interfaces
 [cols="1,2" options="header"]
@@ -102,13 +102,13 @@ User service manages the lifecycle of a user (registration, profile, deactivatio
 `/api/v1/users` | Public REST API exposed via the API gateway for user registration and profile updates.
 | Internal REST Interface +
 `/internal/v1/identity` | Internal REST API used by Auth Service to retrieve hashed credentials and roles.
-| PostgreSQL Persistence | Private JDBC interface to User DB for persisting users.
+| PostgreSQL Persistence | Private JDBC interface to Account DB for persisting users.
 |===
 
 ==== Workout Management Service (Blackbox)
 
 .Responsibility
-Workout Management Service is the core service for managing the lifecycle of user workouts, supporting full CRUD operations. It acts as a producer for the asynchronous data stream, publishing completed workout data to be processed downstream by analytics services.
+Workout Management Service is the core service for managing the lifecycle of user workouts, supporting full CRUD operations. It acts as a producer for the asynchronous data stream, publishing completed workout data to be processed downstream.
 
 .Interfaces
 [cols="1,2" options="header"]
@@ -117,7 +117,7 @@ Workout Management Service is the core service for managing the lifecycle of use
 | Public REST Interface + 
 `/api/v1/workouts` | Public REST API for users to submit workout data and view workout history. 
 | Workout Event Stream +
-`Workout.Domain.Events` | Publisher to SNS Topic. 
+`Workout-Domain-Events` | Publisher to SNS Topic. 
 | PostgreSQL Persistence | Private JDBC interface to Fitness db for persisting workout data.
 |===
 
@@ -148,7 +148,7 @@ The Analytics service is the AI Orchestrator. It's a specialized consumer design
 |===
 | **Name** | **Description**
 | Workout Event Stream + 
-`Workout.Domain.Events` | SQS Consumer that triggers AI analysis workflow
+`Workout-Domain-Events` | SQS Consumer that triggers AI analysis workflow
 | AI Analysis Client | Outbound HTTPS requests to Google API (Gemini). Handles api authentication, prompt injection and response parsing.
 | Notification Stream | An asynchronous SQS interface used to publish final AI generated insights to the Notification Service.
 |===
@@ -162,13 +162,15 @@ The Message Broker provides the asynchronous communication backbone for the syst
 [cols="1,2" options="header"]
 |===
 | **Name** | **Description**
-| `Workout.Domain.Events` | SNS Topic that fans out to SQS
+| `Workout-Domain-Events` | SNS Topic that fans out to SQS
 | Analytics Queue + 
-`Filter: type=process` | SQS queue that receives workout completed events intended for AI processing.
+`Filter: type=workout_completed` | SQS queue that receives workout completed events intended for AI processing.
 | Cleanup Queue +
-`Filter: type=delete` | SQS queue that receives workout lifecycle events to ensure data is purged properly.
+`Filter: type=workout_deleted` | SQS queue that receives workout lifecycle events to ensure data is purged properly.
 | Notification Queue | SQS queue serving as a point to point buffer between Analytics and Notification services.
 |===
+
+=== Level 2
 
 ==== White Box: Notification Service
 
@@ -205,7 +207,7 @@ image::wms-whitebox.svg[]
 | WorkoutController | REST interface that handles synchronous HTTP requests for CRUD operations on workouts. Returns 201 Created or 202 Accepted.
 | WorkoutService | Core business logic. Orchestrates workout lifecycle, ensuring data integrity before persistence and determining when to trigger downstream events.
 | WorkoutRepository | Data access layer for PostgreSQL. Manages persistence of workout entities, exercise mappings, and user specific workout details in relational store.
-| MessageProducer | Integration to Message Broker. Publishes events to SNS Topic. `Workout Completed` sent to Analytics Queue. `Workout Deleted` sent to Cleanup Queue
+| MessageProducer | Integration to Message Broker. Publishes events to SNS Topic. `Workout_Completed` sent to Analytics Queue. `Workout_Deleted` sent to Cleanup Queue
 |===
 
 .Contained Blackboxes
@@ -225,7 +227,7 @@ image::analytics-whitebox.svg[]
 |===
 | **Component** | **Responsibility**
 | QueueListener | Async entrypoint. Monitors the Analytics Queue.
-| AnalyticsService | Core business logic. Creates AI prompt that includes workout data.
+| AnalyticsService | Core business logic. Creates AI prompt for analysis of event workout data.
 | GeminiClient | AI integration adapter. Handles REST communication with Google Gemini API.
 | MessageProducer | Integration to Message Broker. Publishes AI generated insight messages to Notification Queue.
 |===
@@ -247,9 +249,9 @@ image::event-architecture.png[]
 [cols="1,2" options="header"]
 |===
 | **Component** | **Responsibility**
-| Workout.Domain.Events (SNS) | Central entrypoint for event driven architecture. Evaluates message attributes to decide which downstream queue receives the message.
-| Analytics Queue (SQS) | Buffers events tagged with `process` filter for Analytics Service.
-| Cleanup Queue (SQS) | Buffers events tagged with `delete` filter to trigger data removal in Notification service.
+| Workout-Domain-Events (SNS) | Entrypoint for event driven flow. Evaluates message attributes to decide which downstream queue receives the message.
+| Analytics Queue (SQS) | Buffers events tagged with `workout_completed` filter for Analytics Service.
+| Cleanup Queue (SQS) | Buffers events tagged with `workout_deleted` filter to trigger data removal in Notification service.
 | Notification Queue (SQS) | Point to point buffer between Analytics Service and Notification Service.
 | Dead Letter Queues | Store messages that have failed processing after multiple retries, allowing for manual recovery without blocking main queues.
 |===
